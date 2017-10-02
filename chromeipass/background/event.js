@@ -113,26 +113,26 @@ event.onSaveSettings = function(callback, tab, settings) {
 	event.onLoadSettings();
 }
 
-function getStatusHelper(callback,status){
-	browserAction.showDefault(null,tab,status);
-	callback({
-		identifier:qr.uid,
-		isMobileAvailable:mauth.mobile.available,
-		isServerAvailable:mauth.server.available,
-		associated:connected,
-		error: page.tabs[tab.id].errorMessage,
-		mobileName:mauth.mobile.name
-	});
+
+
+function handlerOnGetStatus(uid,tab,callback,status){
+    browserAction.showDefault(null, tab, status);
+    callback({
+        identifier:uid,
+        isMobileAvailable:mauth.isMobileAvailable,
+        isServerAvailable:mauth.isServerAvailable,
+        associated:status,
+        error: page.tabs[tab.id].errorMessage,
+        mobileName:mauth.mobileName
+    });
 }
 
 event.onGetStatus = function(callback, tab) {
-
-	mauth.testAssociationPromise(tab,qr.uid).then( function (){
-		getStatusHelper(callback,true);
-	}, function(){
-		getStatusHelper(callback,false);
+    mauth.testAssociationPromise(qr.uid,tab).then(function(){
+    	handlerOnGetStatus(qr.uid,tab,callback,true);
+	},function(){
+    	handlerOnGetStatus(qr.uid,tab,callback,false);
 	});
-
 }
 
 event.onPopStack = function(callback, tab) {
@@ -212,32 +212,20 @@ event.onMultipleFieldsPopup = function(callback, tab) {
 
 	browserAction.show(null, tab);
 }
-
+// This part is not working
 event.connect = function (callback,tab){
-			var status = mauth.connect(callback,tab);
+			var status = mauth.connect(tab);
 			browserAction.showDefault(null, tab);
 			callback({
 				identifier:qr.uid,
-				isMauthMobileAvailable:mauth.mobile.available,
-				isMauthServerAvailable:mauth.server.available,
+				isMauthMobileAvailable:mauth.isMauthMobileAvailable,
+				isMauthServerAvailable:mauth.isMauthServerAvailable,
 				associated:status,
 				error: page.tabs[tab.id].errorMessage,
 				mobileName:mauth.mobileName
 			});
 }
 
-event.reconnect = function(callback,tab){
-	generateQRCode();
-	browserAction.showDefault(null,tab);
-	callback({
-		identifier:qr.uid,
-		isMauthMobileAvailable:false,
-		isMauthServerAvailable:true,
-		associated:false,
-		error:"Scan the code again !!",
-		mobileName:null
-	});
-}
 
 // all methods named in this object have to be declared BEFORE this!
 event.messageHandlers = {
@@ -264,6 +252,5 @@ event.messageHandlers = {
 	'stack_add': browserAction.stackAdd,
 	'generate_password': keepass.generatePassword,
 	'copy_password': keepass.copyPassword,
-	'connect':event.connect,
-	'reconnect':event.reconnect
+	'connect':event.connect
 };

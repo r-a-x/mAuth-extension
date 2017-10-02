@@ -4,7 +4,7 @@ network.timeOut = 1 ;
 
 network.errorHandler = function(data,status,xhr){
   console.log("Oops !! Error connecting to the server");
-  return xhr != 200;
+  return xhr !== 200;
 }
 
 network.successHandler = function(data,status,xhr){
@@ -16,23 +16,8 @@ network.sendSync = function(url,data,successHandler,errorHandler){
   errorHandler = errorHandler || network.errorHandler;
   // return httpRequest(url,data,successHandler,errorHandler,false);
   data = JSON.stringify(data);
+  console.log("The json data is"+data);
   return http(url,data);
-}
-
-network.sendPollSync = function(url,data,successHandler)
-{
-      $.ajax({
-          url: url,
-          contentType:"application/json",
-          type: "POST",
-          // timeout:5000,
-          data: JSON.stringify(data),
-          success: successHandler,
-          error: function (data,status,xhr) {
-              if ( xhr.status == 404 || xhr.status == 415 )
-                network.sendPollSync(url,data,successHandler);
-          }
-        });
 }
 
 function http(url ,request) {
@@ -40,9 +25,8 @@ function http(url ,request) {
 	xhr.open("POST", url, false);
 	xhr.setRequestHeader("Content-Type", "application/json");
 	try {
-		var r = JSON.stringify(request);
-		page.debug("Request: {1}", r);
-		xhr.send(r);
+		page.debug("Request: {1}", request);
+		xhr.send(request);
 	}
 	catch (e) {
 		console.log("Mauth: " + e);

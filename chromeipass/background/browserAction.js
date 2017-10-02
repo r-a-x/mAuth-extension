@@ -77,7 +77,9 @@ browserAction.showDefault = function(callback, tab ,isConnected) {
 		popup: "popup.html"
 	}
 
-	isConnected =  isConnected|| mauth.isConnected(uid);
+	if ( typeof (isConnected) === 'undefined')
+		isConnected = mauth.isAssociated(uid,tab);
+
 	console.log("The status of the isConnected is: "+ isConnected);
 	if ( !isConnected ){
 		stackData.iconType = "cross";
