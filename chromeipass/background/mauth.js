@@ -232,13 +232,60 @@ mauth.checkStatus = function (status, tab) {
 
 	return success;
 }
+/*
+* type Connection struct{
+	Uid string `json:"uid"`
+	DeviceType string `json:"deviceType"`
+	UserName string `json:"userName"`
+	MobileAlive bool `json"mobileAlive"`
+	BrowserAlive bool	`json":browserAlive"`
+	LastTimeBrowserSync time.Time `json:"lastTimeBrowserSync"`
+	LastTimeMobileSync	time.Time `json:lastTimeMobileSync`
+	ForcedConnect bool `json:forcedConnect"`
+}*/
+mauth.connectUrl = mauth.pluginUrlDefault + "/connect";
+mauth.connectPromise = function (uid,tab,forceful) {
+    return new Promise ( function (resolve,reject){
 
+        var createConnectionRequest = {
+            "uid":uid,
+            "deviceType":"browser",
+            "connectTo" : "mobile",
+            "forcedConnect" : forceful
+        };
+
+        page.tabs[tab.id].errorMessage = error.UnknownErrorInConnection;
+        var result = network.send(createConnectionRequest,mauth.connectUrl);
+        var connect = false;
+
+        if ( result[0]=== 0){
+            updateStatus(false,false,new Date(),new Date());
+            connect = false;
+            page.tabs[tab.id].errorMessage = error.ServerNotReachable;
+        }else if ( result[0]=== 200){
+            connect = result[1]["mobileAlive"];
+            if ( ! result[1]["mobileAlive"] ){
+                page.tabs[tab.id].errorMessage  = error.MobileNotConnected;
+            }
+            updateStatus(result[1]["mobileAlive"],true,result[1]["lastTimeMobileSync"],new Date());
+        }else{
+            updateStatus(false,true,null,new Date());
+            page.tabs[tab.id].errorMessage = error.MobileNotConnected;
+        }
+        if ( connect){
+            resolve();
+        }else{
+            reject();
+        }
+
+    });
+}
 
 mauth.isConnectedUrl = mauth.pluginUrlDefault + "/isconnected";
 mauth.testAssociationPromise = function ( uid, tab ){
 
         return new Promise( function (resolve,reject){
-
+            console.log("In the promise method");
             var checkConnectionRequest = {
                 "uid":uid,
                 "deviceType":"browser",
@@ -248,13 +295,14 @@ mauth.testAssociationPromise = function ( uid, tab ){
 
             var connected = false;
 
-            page.tabs[tab.id].errorMessage = error.UnknownErrorInConnection;
-            if ( qr.uid === uid &&  getTimeInSeconds(new Date(), mauth.server.lastCall) < mauth.waitingTimeIntervalInSeconds ) {
+            var timeElapsed = getTimeInSeconds(new Date(),mauth.serverLastCall);
+            if ( qr.uid == uid &&  timeElapsed < mauth.waitingTimeIntervalInSeconds ) {
                     connected = mauth.isAssociated();
             }
             else {
                 var result = network.send(checkConnectionRequest, mauth.isConnectedUrl);
-                if (result === null) {
+                if (result[0] === 0) {
+                    console.log("The server is off, therefore getting the null respones");
                     page.tabs[tab.id].errorMessage = error.ServerNotReachable;
                     connected = false;
                     updateStatus(false,false,new Date(),new Date());
@@ -265,6 +313,10 @@ mauth.testAssociationPromise = function ( uid, tab ){
                         if ( !result[1]["mobileAlive"] )
                             page.tabs[tab.id].errorMessage = error.MobileNotConnected;
                         updateStatus(connected,true,result[1]["lastTimeMobileSync"],new Date());
+                }
+                else {
+                    page.tabs[tab.id].errorMessage = error.MobileNotConnected;
+                    updateStatus(false,true,null,new Date());
                 }
             }
 

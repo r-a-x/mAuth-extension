@@ -128,10 +128,12 @@ function handlerOnGetStatus(uid,tab,callback,status){
 }
 
 event.onGetStatus = function(callback, tab) {
+	console.log("The call to the connect is made for the OnGetStatus");
     mauth.testAssociationPromise(qr.uid,tab).then(function(){
     	handlerOnGetStatus(qr.uid,tab,callback,true);
-	},function(){
-    	handlerOnGetStatus(qr.uid,tab,callback,false);
+	}
+	).catch( function(){
+		handlerOnGetStatus(qr.uid,tab,callback,false);
 	});
 }
 
@@ -212,20 +214,52 @@ event.onMultipleFieldsPopup = function(callback, tab) {
 
 	browserAction.show(null, tab);
 }
-// This part is not working
-event.connect = function (callback,tab){
-			var status = mauth.connect(tab);
-			browserAction.showDefault(null, tab);
-			callback({
-				identifier:qr.uid,
-				isMauthMobileAvailable:mauth.isMauthMobileAvailable,
-				isMauthServerAvailable:mauth.isMauthServerAvailable,
-				associated:status,
-				error: page.tabs[tab.id].errorMessage,
-				mobileName:mauth.mobileName
-			});
+
+
+function handlerConnect(uid, tab, callback, status){
+	browserAction.showDefault(null,tab,status);
+    callback({
+        identifier:uid,
+        isMauthMobileAvailable:mauth.isMauthMobileAvailable,
+        isMauthServerAvailable:mauth.isMauthServerAvailable,
+        associated:status,
+        error: page.tabs[tab.id].errorMessage,
+        mobileName:mauth.mobileName
+    });
+
 }
 
+event.connect = function (callback,tab){
+	mauth.connectPromise(qr.uid,tab,false).then(function () {
+		handlerConnect(qr.uid,tab,callback,true);
+	}).catch( function() {
+		handlerConnect(qr.uid,tab,callback,false);
+	});
+}
+
+event.regenerateQRCode = function(callback, tab){
+
+	console.log("The regenerateQRCode is pressed !! Let's see what will be the response");
+	var uid = qr.regenerateCode() ;
+	if ( typeof (uid) === 'undefined')
+		page.tabs[tab.id].errorMessage = error.UnableToGenerateQRCode;
+
+	callback({
+		identifier : qr.regenerateCode(),
+		error : page.tabs[tab.id].errorMessage
+	});
+
+}
+
+event.reconnect = function(callback , tab){
+
+    mauth.connectPromise(qr.uid,tab,true).then(function () {
+        handlerConnect(qr.uid,tab,callback,true);
+    }).catch( function() {
+        handlerConnect(qr.uid,tab,callback,false);
+    });
+
+}
 
 // all methods named in this object have to be declared BEFORE this!
 event.messageHandlers = {
@@ -252,5 +286,7 @@ event.messageHandlers = {
 	'stack_add': browserAction.stackAdd,
 	'generate_password': keepass.generatePassword,
 	'copy_password': keepass.copyPassword,
-	'connect':event.connect
+	'connect':event.connect,
+	'reconnect' : event.reconnect,
+	'regenerate_qr' : event.regenerateQRCode
 };

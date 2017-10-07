@@ -9,3 +9,8 @@ function generateQRCode(){
   var encoded = sjcl.codec.base64.fromBits(x);
   return encoded;
 }
+
+qr.regenerateCode = function(){
+  qr.uid = generateQRCode();
+  return qr.uid;
+}
